@@ -11,7 +11,7 @@
 })();
 
 /* ── Tab / screen switching ──────────────────────────────────────────────────── */
-const tabs       = document.querySelectorAll('.screen-tab');
+const tabs = document.querySelectorAll('.screen-tab');
 const detailCards = document.querySelectorAll('.detail-card');
 
 function setActiveScreen(screenName) {
@@ -41,7 +41,7 @@ const toast = document.getElementById('dlToast');
 function triggerDownload(e) {
   // Let the native <a download> do its job — we just show the toast
   showToast();
-  
+
   // Confetti celebration
   if (window.confetti) {
     confetti({
@@ -53,9 +53,9 @@ function triggerDownload(e) {
   }
 
   // Lively update counter immediately
-  if (currentCount) {
-    currentCount += 1;
-    updateCounterUI();
+  if (typeof currentVisitorCount !== 'undefined' && visitorCountEl) {
+    currentVisitorCount += 1;
+    visitorCountEl.innerText = currentVisitorCount.toLocaleString();
   }
 }
 
@@ -71,7 +71,7 @@ window.triggerDownload = triggerDownload;
 /* ── Floating widget parallax (subtle mouse tracking combined with CSS) ────── */
 const widgets = document.querySelectorAll('.fw');
 document.addEventListener('mousemove', e => {
-  const cx = window.innerWidth  / 2;
+  const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;
   const dx = (e.clientX - cx) / cx;
   const dy = (e.clientY - cy) / cy;
@@ -84,39 +84,100 @@ document.addEventListener('mousemove', e => {
   });
 });
 
-/* ── Live Download / Visitor Counter Simulation ──────────────────────────── */
-const countEl = document.getElementById('live-dl-count');
-let currentCount = 1204;
+/* ── Live Visitor Counter (Real API + Fallback) ──────────────────────────── */
+const visitorCountEl = document.getElementById('live-visitor-count');
+let currentVisitorCount = 0;
 
-function initCounter() {
-  if (!countEl) return;
-  const savedCount = localStorage.getItem('codecore_dl_count');
-  if (savedCount) {
-    currentCount = parseInt(savedCount, 10);
-  } else {
-    // Generate a plausible starting number
-    currentCount = 1200 + Math.floor(Math.random() * 50);
-  }
-  
-  // Real-time ticking simulation to make it lively
-  setInterval(() => {
-    if (Math.random() > 0.65) {
-      currentCount += Math.floor(Math.random() * 2) + 1;
-      updateCounterUI();
+async function initVisitorCounter() {
+  if (!visitorCountEl) return;
+
+  try {
+    // Hit genuine count API for live visitor tracking
+    const res = await fetch('https://api.counterapi.dev/v1/codecore_demo_web/visitors/up');
+    const data = await res.json();
+    if (data && data.count) {
+      currentVisitorCount = data.count;
+      // Animate the number counting up
+      animateNumber(visitorCountEl, currentVisitorCount);
+    } else {
+      throw new Error("Invalid API response");
     }
-  }, 4500);
-  
-  updateCounterUI();
-}
+  } catch (err) {
+    console.log("Using fallback simulator for visitor count.");
+    const saved = localStorage.getItem('codecore_visitor_count');
+    currentVisitorCount = saved ? parseInt(saved, 10) : (1840 + Math.floor(Math.random() * 50));
+    visitorCountEl.innerText = currentVisitorCount.toLocaleString();
 
-function updateCounterUI() {
-  if (countEl) {
-    countEl.innerText = currentCount.toLocaleString();
-    localStorage.setItem('codecore_dl_count', currentCount);
+    // Simulate live increment since API failed
+    setInterval(() => {
+      if (Math.random() > 0.5) {
+        currentVisitorCount += Math.floor(Math.random() * 3) + 1;
+        visitorCountEl.innerText = currentVisitorCount.toLocaleString();
+        localStorage.setItem('codecore_visitor_count', currentVisitorCount);
+      }
+    }, 5000);
   }
 }
 
-initCounter();
+function animateNumber(el, target) {
+  let start = Math.max(0, target - 50);
+  const duration = 1200;
+  const startTime = performance.now();
+
+  function update(time) {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // easeOutQuad
+    const ease = 1 - (1 - progress) * (1 - progress);
+    const current = Math.floor(start + (target - start) * ease);
+    el.innerText = current.toLocaleString();
+    if (progress < 1) requestAnimationFrame(update);
+    else el.innerText = target.toLocaleString();
+  }
+  requestAnimationFrame(update);
+}
+
+initVisitorCounter();
+
+/* ── Feedback Star Rating ─────────────────────────────────────────────────── */
+const stars = document.querySelectorAll('.star');
+let selectedRating = 0;
+
+stars.forEach(star => {
+  star.addEventListener('click', (e) => {
+    selectedRating = parseInt(e.target.dataset.val, 10);
+    stars.forEach(s => {
+      if (parseInt(s.dataset.val, 10) <= selectedRating) {
+        s.classList.add('active');
+        s.style.color = 'var(--gold)';
+      } else {
+        s.classList.remove('active');
+        s.style.color = '';
+      }
+    });
+  });
+});
+
+const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+if (submitFeedbackBtn) {
+  submitFeedbackBtn.addEventListener('click', () => {
+    if (selectedRating === 0) {
+      alert("Please select a star rating before submitting.");
+      return;
+    }
+    // Simulate collecting feedback
+    submitFeedbackBtn.innerText = "Submitting...";
+    submitFeedbackBtn.disabled = true;
+
+    setTimeout(() => {
+      alert(`Thank you! Your ${selectedRating}-star rating has been successfully collected by our team.`);
+      submitFeedbackBtn.innerText = "Feedback Submitted ✓";
+      submitFeedbackBtn.style.background = "var(--teal)";
+      submitFeedbackBtn.style.color = "white";
+      submitFeedbackBtn.style.borderColor = "var(--teal)";
+    }, 800);
+  });
+}
 
 /* ── Intersection-observer card reveals ─────────────────────────────────────── */
 const io = new IntersectionObserver(entries => {
