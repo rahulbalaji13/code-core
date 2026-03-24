@@ -403,11 +403,12 @@ body {
 
 .hero-copy h2 {
   font-family: "Syne", sans-serif;
-  font-size: clamp(2.8rem, 5vw, 4.6rem);
+  font-size: clamp(2.5rem, 4.5vw, 4.2rem);
   font-weight: 800;
-  line-height: 1.0;
+  line-height: 1.05;
   letter-spacing: -0.02em;
   margin-bottom: 20px;
+  word-break: break-word;
 }
 
 .hero-copy h2 em {
@@ -1594,6 +1595,20 @@ body {
 
   .highlights-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hl-card {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .section-heading {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .fs-grid {
